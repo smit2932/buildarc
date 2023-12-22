@@ -1,11 +1,26 @@
+import 'package:ardennes/auth_screen.dart';
+import 'package:ardennes/features/drawings_catalog/drawings_catalog_bloc.dart';
+import 'package:ardennes/features/upload_drawing/add_files/add_files_view.dart';
+import 'package:ardennes/features/drawings_catalog/drawings_catalog_event.dart'
+    as dc_event;
+import 'package:ardennes/libraries/account_context/bloc.dart';
+import 'package:ardennes/libraries/account_context/event.dart' as ac_event;
+import 'package:ardennes/main_screen.dart';
+import 'package:ardennes/models/companies/fake_company_data.dart';
+import 'package:ardennes/models/drawings/fake/fake_drawing_detail_data.dart';
+import 'package:ardennes/models/drawings/fake/fake_drawings_catalog_data.dart';
+import 'package:ardennes/models/projects/fake_project_data.dart';
+import 'package:ardennes/models/accounts/fake_user_data.dart';
+import 'package:ardennes/models/screens/fake_home_screen_data.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
-import 'package:firebase_ui_auth/firebase_ui_auth.dart';
-import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +30,8 @@ void main() async {
   await dotenv.load(fileName: "assets/.env");
   if (dotenv.get("USE_FIREBASE_EMU", fallback: "false") == "true") {
     await _configureFirebaseAuth();
-    await _configureFirebaseNoSQL();
+    await _configureFirebaseFirestore();
+    await _configureFirebaseStorage();
   }
   runApp(const MyApp());
 }
@@ -23,155 +39,16 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: _router,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthGate(),
     );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, this.user});
-
-  final String title;
-  final User? user;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute<ProfileScreen>(
-                      builder: (context) => ProfileScreen(
-                            appBar: AppBar(
-                                title: Text(widget.user?.displayName ??
-                                    widget.user?.email ??
-                                    "User")),
-                            actions: [
-                              SignedOutAction((context) {
-                                Navigator.of(context).pop();
-                              })
-                            ],
-                            children: [
-                              const Divider(),
-                              Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: Image.asset(
-                                      'assets/images/buildarc-logo.webp'))
-                            ],
-                          )));
-            },
-          )
-        ],
-        automaticallyImplyLeading: false,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
-}
-
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return SignInScreen(
-              providers: [
-                EmailAuthProvider(),
-                GoogleProvider(clientId: "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")
-              ],
-              headerBuilder: (context, constraints, shrinkOffset) {
-                return Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: AspectRatio(
-                        aspectRatio: 1,
-                        child:
-                            Image.asset('assets/images/buildarc-logo.webp')));
-              },
-              subtitleBuilder: (context, action) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: action == AuthAction.signIn
-                      ? Text(
-                          'Welcome to BuildArc, please sign in to continue.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        )
-                      : Text(
-                          'Welcome to BuildArc, please sign up to continue.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                );
-              },
-              footerBuilder: (context, action) {
-                return Padding(
-                    padding: const EdgeInsets.only(top: 32),
-                    child: Text(
-                      "By signing in, you agree to our Terms of Service and Privacy Policy",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ));
-              },
-              sideBuilder: (context, shrinkOffset) {
-                return Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: Image.asset('assets/images/buildarc-logo.webp'),
-                  ),
-                );
-              },
-            );
-          }
-          return MyHomePage(
-              title: 'Flutter Demo Home Page',
-              user: FirebaseAuth.instance.currentUser);
-        });
   }
 }
 
@@ -182,9 +59,61 @@ Future<void> _configureFirebaseAuth() async {
   debugPrint('Using Firebase Auth emulator on: $host:$port');
 }
 
-Future<void> _configureFirebaseNoSQL() async {
+Future<void> _configureFirebaseFirestore() async {
   var host = dotenv.get("FIREBASE_EMU_URL", fallback: "localhost");
   var port = int.parse(dotenv.get("FIRESTORE_EMU_PORT", fallback: "8080"));
   FirebaseFirestore.instance.useFirestoreEmulator(host, port);
   debugPrint('Using Firebase Firestore emulator on: $host:$port');
+  populateCompanies();
+  populateProjects();
+  final drawings = populateDrawingsDetailNoorAcademy();
+  populateDrawingsCatalogNoorAcademy(drawings);
+  populateUsers();
+  populateHomeScreens();
 }
+
+Future<void> _configureFirebaseStorage() async {
+  var host = dotenv.get("FIREBASE_EMU_URL", fallback: "localhost");
+  var port = int.parse(dotenv.get("STORAGE_EMU_PORT", fallback: "9199"));
+  FirebaseStorage.instance.useStorageEmulator(host, port);
+  debugPrint('Using Firebase storage emulator on: $host:$port');
+}
+
+// GoRouter configuration
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      redirect: (BuildContext context, GoRouterState state) async {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          return '/home';
+        } else {
+          return '/signin';
+        }
+      },
+    ),
+    GoRoute(
+        path: '/home',
+        builder: (context, state) => MultiBlocProvider(providers: [
+              BlocProvider<DrawingsCatalogBloc>(create: (BuildContext context) {
+                return DrawingsCatalogBloc()..add(dc_event.InitEvent());
+              }),
+              BlocProvider<AccountContextBloc>(
+                  create: (BuildContext context) =>
+                      AccountContextBloc()..add(ac_event.InitEvent()))
+            ], child: const MainScreen())),
+    GoRoute(
+      path: '/signin',
+      builder: (context, state) => const AuthScreen(),
+    ),
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const AuthScreen(),
+    ),
+    GoRoute(
+      path: '/drawing-publish/file-upload',
+      builder: (context, state) => const AddFilesScreen(),
+    ),
+  ],
+);
