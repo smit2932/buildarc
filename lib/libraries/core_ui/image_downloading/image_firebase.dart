@@ -55,20 +55,33 @@ class WebImageFromFirebase extends StatelessWidget {
   }
 }
 
-class CachedImageFromFirebase extends StatelessWidget {
+class CachedImageFromFirebase extends StatefulWidget {
   const CachedImageFromFirebase({super.key, required this.imageUrl});
 
   final String imageUrl;
 
   @override
+  State<StatefulWidget> createState() => CachedImageFromFirebaseState();
+}
+
+class CachedImageFromFirebaseState extends State<CachedImageFromFirebase> {
+  Image? loadedImage;
+
+  @override
   Widget build(BuildContext context) {
+    final image = loadedImage;
+    if (image != null) {
+      return image;
+    }
     return FutureBuilder<Uint8List>(
       future: _getCachedImage(),
       builder: (BuildContext context, AsyncSnapshot<Uint8List> snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           if (snapshot.hasData) {
             // Load the image from the cache
-            return Image.memory(snapshot.data!);
+            final image = Image.memory(snapshot.data!);
+            loadedImage = image;
+            return image;
           } else if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
           }
@@ -85,7 +98,7 @@ class CachedImageFromFirebase extends StatelessWidget {
     }
 
     final directory = await getApplicationDocumentsDirectory();
-    final imagePath = '${directory.path}/${_generateCacheFileName(imageUrl)}';
+    final imagePath = '${directory.path}/${_generateCacheFileName(widget.imageUrl)}';
     final imageFile = File(imagePath);
     if (await imageFile.exists()) {
       final imageData = await imageFile.readAsBytes();
@@ -97,7 +110,7 @@ class CachedImageFromFirebase extends StatelessWidget {
 
   Future<Uint8List> _downloadFile(File? imageFile) async {
     final imageData = await FirebaseFileDownloader()
-        .downloadFile(imageUrl, _generateCacheFileName(imageUrl));
+        .downloadFile(widget.imageUrl, _generateCacheFileName(widget.imageUrl));
     if (imageFile != null) {
       await imageFile.writeAsBytes(imageData);
     }

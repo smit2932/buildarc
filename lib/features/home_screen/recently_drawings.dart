@@ -4,6 +4,7 @@ import 'package:ardennes/libraries/core_ui/shimmer/bar_shimmer.dart';
 import 'package:ardennes/libraries/extensions/scoped.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'bloc.dart';
 
@@ -80,41 +81,54 @@ class _RecentlyViewedDrawingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 135,
-      height: 80,
-      decoration: BoxDecoration(
-        border: Border.all(
-          width: 1.0,
-          color: Colors.grey,
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Column(children: [
-            Expanded(
-              flex: 4,
-              // child: Image.asset(drawingThumbnailUrl),
-              child: ImageFromFirebase(imageUrl: drawingThumbnailUrl),
+    return GestureDetector(
+        onTap: () {
+          context.go(
+            Uri(
+              path: '/drawings/sheet',
+              queryParameters: {
+                'number': title,
+                'collection': subtitle,
+                'versionId': "0",
+              },
+            ).toString(),
+          );
+        },
+        child: Container(
+          width: 135,
+          height: 80,
+          decoration: BoxDecoration(
+            border: Border.all(
+              width: 1.0,
+              color: Colors.grey,
             ),
-            const Divider(),
-            Expanded(
-                flex: 2,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ])),
-          ])),
-    );
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Column(children: [
+                Expanded(
+                  flex: 4,
+                  // child: Image.asset(drawingThumbnailUrl),
+                  child: ImageFromFirebase(imageUrl: drawingThumbnailUrl),
+                ),
+                const Divider(),
+                Expanded(
+                    flex: 2,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ])),
+              ])),
+        ));
   }
 }

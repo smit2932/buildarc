@@ -20,11 +20,11 @@ class DrawingVersion {
   factory DrawingVersion.fromMap(Map<String, dynamic> map) {
     return DrawingVersion(
       files: Map<String, String>.from(map['files']),
-      createdByUserId: map['created_by_user_id'],
+      createdByUserId: map['published_by_user_id'],
       issuanceDate: map['issuance_date'],
       publishSessionId: map['publish_session_id'],
-      publishStatus: map['publish_status'],
-      versionSet: map['version_set'],
+      publishStatus: map['status'],
+      versionSet: map['version_name'],
     );
   }
 
@@ -57,25 +57,34 @@ class DrawingDetail {
     required this.versions,
   });
 
-  factory DrawingDetail.fromMap(Map<String, dynamic> map) {
+  factory DrawingDetail.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+    SnapshotOptions? options,
+  ) {
+    final data = snapshot.data();
+
     return DrawingDetail(
-      collection: map['collection'],
-      number: map['number'],
-      projectId: map['project_id'],
-      discipline: map['discipline'],
-      tags: List<String>.from(map['tags']),
-      versions: Map<int, DrawingVersion>.from(map['versions']),
+      collection: data?['collection'],
+      number: data?['number'],
+      projectId: data?['project'],
+      discipline: data?['discipline'],
+      tags: List<String>.from(data?['tags']),
+      versions: (data?['versions'] as Map<String, dynamic>).map((key, value) =>
+          MapEntry(int.parse(key),
+              DrawingVersion.fromMap(value as Map<String, dynamic>)))
+      ,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  static Map<String, dynamic> toFirestore(
+      DrawingDetail drawingDetail, SetOptions? options) {
     return {
-      'collection': collection,
-      'number': number,
-      'project_id': projectId,
-      'discipline': discipline,
-      'tags': tags,
-      'versions': versions,
+      'collection': drawingDetail.collection,
+      'number': drawingDetail.number,
+      'project_id': drawingDetail.projectId,
+      'discipline': drawingDetail.discipline,
+      'tags': drawingDetail.tags,
+      'versions': drawingDetail.versions,
     };
   }
 }
