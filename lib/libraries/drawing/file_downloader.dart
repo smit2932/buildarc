@@ -22,10 +22,21 @@ class FirebaseFileDownloader implements FileDownloader {
     final storageRef = FirebaseStorage.instance.ref();
 
     final drawingRef = storageRef.child(url );
-
+    int dataSize;
+    String lowerCaseUrl = url.toLowerCase();
+    if (lowerCaseUrl.contains('sd')) {
+      dataSize = 2 * 1024 * 1024; // two megabytes
+    } else if (lowerCaseUrl.contains('uhd')) {
+      dataSize = 10 * 1024 * 1024; // ten megabytes
+    } else if (lowerCaseUrl.contains('hd')) {
+      dataSize = 4 * 1024 * 1024; // four megabytes
+    } else if (lowerCaseUrl.contains('smallthumbnail')){
+      dataSize = 256 * 1024; // one megabyte as default
+    } else {
+      dataSize = 1024  * 1024; // one megabyte as default
+    }
     try {
-      const oneMegabyte = 1024 * 1024;
-      final Uint8List? data = await drawingRef.getData(oneMegabyte);
+      final Uint8List? data = await drawingRef.getData(dataSize);
       if (data != null) {
         return data;
       } else {

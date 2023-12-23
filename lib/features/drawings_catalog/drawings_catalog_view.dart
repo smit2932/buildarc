@@ -6,6 +6,7 @@ import 'package:ardennes/models/drawings/drawings_catalog_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:go_router/go_router.dart';
 
 import 'drawings_catalog_bloc.dart';
 import 'drawings_catalog_event.dart';
@@ -80,6 +81,7 @@ class DrawingsCatalogScreenState extends State<DrawingsCatalogScreen> {
                       Expanded(
                         child: DrawingGrid(
                           drawingItems: state.displayedItems,
+                          projectId: state.drawingsCatalog.projectId,
                         ),
                       )
                     ],
@@ -98,9 +100,11 @@ class DrawingsCatalogScreenState extends State<DrawingsCatalogScreen> {
 
 class DrawingGrid extends StatelessWidget {
   final List<DrawingItem> drawingItems;
+  final String projectId;
 
   const DrawingGrid({
     Key? key,
+    required this.projectId,
     required this.drawingItems,
   }) : super(key: key);
 
@@ -109,13 +113,28 @@ class DrawingGrid extends StatelessWidget {
     return GridView.count(
       crossAxisCount: 3,
       children: drawingItems.map((drawing) {
-        return Card(
-          child: Column(
-            children: [
-              Expanded(
-                  child: ImageFromFirebase(imageUrl: drawing.thumbnailUrl)),
-              Text(drawing.title),
-            ],
+        return GestureDetector(
+          onTap: () {
+            context.go(
+              Uri(
+                path: '/drawings/sheet/',
+                queryParameters: {
+                  'number': drawing.title,
+                  'collection': drawing.collection,
+                  'versionId': drawing.versionId.toString(),
+                  'projectId': projectId
+                },
+              ).toString(),
+            );
+          },
+          child: Card(
+            child: Column(
+              children: [
+                Expanded(
+                    child: ImageFromFirebase(imageUrl: drawing.thumbnailUrl)),
+                Text(drawing.title),
+              ],
+            ),
           ),
         );
       }).toList(),

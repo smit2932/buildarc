@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// is added for a different version, then a new DrawingItem.
 class DrawingItem {
   final String title;
-  final String microThumbnailUrl;
+  final String smallThumbnailUrl;
   final String thumbnailUrl;
   final String sdUrl;
   final String sheetNumberClip;
@@ -17,7 +17,7 @@ class DrawingItem {
   DrawingItem(
       {
       required this.title,
-      required this.microThumbnailUrl,
+      required this.smallThumbnailUrl,
       required this.thumbnailUrl,
       required this.sdUrl,
       required this.sheetNumberClip,
@@ -29,7 +29,7 @@ class DrawingItem {
   factory DrawingItem.fromMap(Map<String, dynamic> map) {
     return DrawingItem(
       title: map['title'],
-      microThumbnailUrl: map['images']['micro_thumbnail_image'],
+      smallThumbnailUrl: map['images']['micro_thumbnail_image'],
       thumbnailUrl: map['images']['thumbnail_image'],
       sdUrl: map['images']['sd_image'],
       sheetNumberClip: map['images']['sheet_number_clip'],
@@ -44,7 +44,7 @@ class DrawingItem {
     return {
       'title': title,
       "images": {
-        'micro_thumbnail_url': microThumbnailUrl,
+        'micro_thumbnail_url': smallThumbnailUrl,
         'thumbnail_url': thumbnailUrl,
         'sd_url': sdUrl,
         'sheet_number_clip': sheetNumberClip,
