@@ -1,26 +1,28 @@
 import 'package:ardennes/auth_screen.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_bloc.dart';
-import 'package:ardennes/features/upload_drawing/add_files/add_files_view.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_event.dart'
-    as dc_event;
+as dc_event;
+import 'package:ardennes/features/drawings_catalog/drawings_catalog_view.dart';
+import 'package:ardennes/features/home_screen/view.dart';
 import 'package:ardennes/libraries/account_context/bloc.dart';
 import 'package:ardennes/libraries/account_context/event.dart' as ac_event;
 import 'package:ardennes/main_screen.dart';
+import 'package:ardennes/models/accounts/fake_user_data.dart';
 import 'package:ardennes/models/companies/fake_company_data.dart';
 import 'package:ardennes/models/drawings/fake/fake_drawing_detail_data.dart';
 import 'package:ardennes/models/drawings/fake/fake_drawings_catalog_data.dart';
 import 'package:ardennes/models/projects/fake_project_data.dart';
-import 'package:ardennes/models/accounts/fake_user_data.dart';
 import 'package:ardennes/models/screens/fake_home_screen_data.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
+
 import 'firebase_options.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
-import 'package:firebase_storage/firebase_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,41 +81,61 @@ Future<void> _configureFirebaseStorage() async {
   debugPrint('Using Firebase storage emulator on: $host:$port');
 }
 
-// GoRouter configuration
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _homeNavigatorKey = GlobalKey<NavigatorState>();
+final _drawingCatalogNavigatorKey = GlobalKey<NavigatorState>();
+
 final _router = GoRouter(
   routes: [
-    GoRoute(
-      path: '/',
-      redirect: (BuildContext context, GoRouterState state) async {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          return '/home';
-        } else {
-          return '/signin';
-        }
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return MultiBlocProvider(providers: [
+          BlocProvider<DrawingsCatalogBloc>(create: (BuildContext context) {
+            return DrawingsCatalogBloc()
+              ..add(dc_event.InitEvent());
+          }),
+          BlocProvider<AccountContextBloc>(
+              create: (BuildContext context) =>
+              AccountContextBloc()
+                ..add(ac_event.InitEvent()))
+        ], child: MainScreen(navigationShell: navigationShell));
       },
+      branches: [
+        StatefulShellBranch(
+          navigatorKey: _homeNavigatorKey,
+          routes: [
+            GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomeScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _drawingCatalogNavigatorKey,
+          routes: [
+            GoRoute(
+              path: '/drawings',
+              builder: (context, state) => const DrawingsCatalogScreen(),
+            ),
+          ],
+        ),
+      ],
     ),
-    GoRoute(
-        path: '/home',
-        builder: (context, state) => MultiBlocProvider(providers: [
-              BlocProvider<DrawingsCatalogBloc>(create: (BuildContext context) {
-                return DrawingsCatalogBloc()..add(dc_event.InitEvent());
-              }),
-              BlocProvider<AccountContextBloc>(
-                  create: (BuildContext context) =>
-                      AccountContextBloc()..add(ac_event.InitEvent()))
-            ], child: const MainScreen())),
     GoRoute(
       path: '/signin',
       builder: (context, state) => const AuthScreen(),
     ),
     GoRoute(
       path: '/',
-      builder: (context, state) => const AuthScreen(),
+      redirect: (BuildContext context, GoRouterState state) async {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          return '/drawings';
+        } else {
+          return '/signin';
+        }
+      },
     ),
-    GoRoute(
-      path: '/drawing-publish/file-upload',
-      builder: (context, state) => const AddFilesScreen(),
-    ),
+    // Other routes...
   ],
 );

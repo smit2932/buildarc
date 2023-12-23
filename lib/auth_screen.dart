@@ -14,7 +14,7 @@ class AuthScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            GoRouter.of(context).go('/home');
+            GoRouter.of(context).go('/drawings');
           });
           return Container(); // return an empty widget
         } else {
