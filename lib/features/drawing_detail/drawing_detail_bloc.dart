@@ -1,16 +1,16 @@
 import 'package:ardennes/models/drawings/drawing_detail.dart';
-import 'package:bloc/bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'drawing_detail_event.dart';
 import 'drawing_detail_state.dart';
 
 class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
   DrawingDetailBloc() : super(DrawingDetailState().init()) {
-    on<InitEvent>(_init);
+    on<LoadSheet>(_init);
   }
 
-  void _init(InitEvent event, Emitter<DrawingDetailState> emit) async {
+  void _init(LoadSheet event, Emitter<DrawingDetailState> emit) async {
     emit(DrawingDetailStateLoading());
 
     Query<DrawingDetail> drawingDetailQuery = FirebaseFirestore.instance

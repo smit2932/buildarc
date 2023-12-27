@@ -1,10 +1,12 @@
 import 'package:ardennes/auth_screen.dart';
+import 'package:ardennes/features/drawing_detail/drawing_detail_bloc.dart';
 import 'package:ardennes/features/drawing_detail/drawing_detail_view.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_bloc.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_event.dart'
     as dc_event;
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_view.dart';
 import 'package:ardennes/features/home_screen/view.dart';
+import 'package:ardennes/injection.dart';
 import 'package:ardennes/libraries/account_context/bloc.dart';
 import 'package:ardennes/libraries/account_context/event.dart' as ac_event;
 import 'package:ardennes/main_screen.dart';
@@ -23,6 +25,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/drawing_detail/drawing_detail_event.dart' as dd_event;
 import 'firebase_options.dart';
 
 void main() async {
@@ -36,6 +39,7 @@ void main() async {
     await _configureFirebaseFirestore();
     await _configureFirebaseStorage();
   }
+  configureDependencies();
   runApp(const MyApp());
 }
 
@@ -97,11 +101,11 @@ final _router = GoRouter(
       builder: (context, state, navigationShell) {
         return MultiBlocProvider(providers: [
           BlocProvider<DrawingsCatalogBloc>(create: (BuildContext context) {
-            return DrawingsCatalogBloc()..add(dc_event.InitEvent());
+            return getIt<DrawingsCatalogBloc>()..add(dc_event.InitEvent());
           }),
           BlocProvider<AccountContextBloc>(
               create: (BuildContext context) =>
-                  AccountContextBloc()..add(ac_event.InitEvent()))
+                  getIt<AccountContextBloc>()..add(ac_event.InitEvent()))
         ], child: MainScreen(navigationShell: navigationShell));
       },
       branches: [
@@ -133,11 +137,31 @@ final _router = GoRouter(
                       final versionId = int.tryParse(
                               state.uri.queryParameters['versionId'] ?? '') ??
                           0;
-                      return DrawingDetailScreen(
-                          number: number,
-                          collection: collection,
-                          projectId: projectId,
-                          versionId: versionId);
+                      return MultiBlocProvider(
+                          providers: [
+                            BlocProvider<DrawingsCatalogBloc>(
+                                create: (BuildContext context) {
+                              return getIt<DrawingsCatalogBloc>();
+                            }),
+                            BlocProvider<AccountContextBloc>(
+                                create: (BuildContext context) =>
+                                    getIt<AccountContextBloc>()
+                                      ..add(ac_event.InitEvent())),
+                            BlocProvider<DrawingDetailBloc>(
+                              create: (BuildContext context) =>
+                                  DrawingDetailBloc()
+                                    ..add(dd_event.LoadSheet(
+                                        number: number,
+                                        collection: collection,
+                                        versionId: versionId,
+                                        projectId: projectId)),
+                            )
+                          ],
+                          child: DrawingDetailScreen(
+                              number: number,
+                              collection: collection,
+                              projectId: projectId,
+                              versionId: versionId));
                     },
                   ),
                 ]),
