@@ -25,11 +25,11 @@ class FirebaseFileDownloader implements FileDownloader {
     int dataSize;
     String lowerCaseUrl = url.toLowerCase();
     if (lowerCaseUrl.contains('sd')) {
-      dataSize = 2 * 1024 * 1024; // two megabytes
+      dataSize = (2.5 * 1024 * 1024).toInt(); // two megabytes
     } else if (lowerCaseUrl.contains('uhd')) {
       dataSize = 10 * 1024 * 1024; // ten megabytes
     } else if (lowerCaseUrl.contains('hd')) {
-      dataSize = 4 * 1024 * 1024; // four megabytes
+      dataSize = 6 * 1024 * 1024; // four megabytes
     } else if (lowerCaseUrl.contains('smallthumbnail')){
       dataSize = 256 * 1024; // one megabyte as default
     } else {
