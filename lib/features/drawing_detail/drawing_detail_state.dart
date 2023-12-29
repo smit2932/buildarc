@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:ardennes/models/drawings/drawing_detail.dart';
 
 class DrawingDetailState {
@@ -19,8 +21,9 @@ class DrawingDetailStateLoading extends DrawingDetailState {
 
 class DrawingDetailStateLoaded extends DrawingDetailState {
   final DrawingDetail drawingDetail;
+  final Image? image;
 
-  DrawingDetailStateLoaded({required this.drawingDetail});
+  DrawingDetailStateLoaded({required this.drawingDetail, this.image});
 
   @override
   DrawingDetailStateLoaded clone() {

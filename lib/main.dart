@@ -149,7 +149,7 @@ final _router = GoRouter(
                                       ..add(ac_event.InitEvent())),
                             BlocProvider<DrawingDetailBloc>(
                               create: (BuildContext context) =>
-                                  DrawingDetailBloc()
+                                  getIt<DrawingDetailBloc>()
                                     ..add(dd_event.LoadSheet(
                                         number: number,
                                         collection: collection,

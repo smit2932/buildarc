@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+
 import 'package:ardennes/libraries/core_ui/canvas/drawing_mode.dart';
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:flutter/material.dart' hide Image;
@@ -18,6 +19,7 @@ class DrawingCanvas extends HookWidget {
   final GlobalKey canvasGlobalKey;
   final ValueNotifier<int> polygonSides;
   final ValueNotifier<bool> filled;
+  final ValueNotifier<bool> isScaling;
 
   final Color kCanvasColor = const Color(0xfff2f3f7);
 
@@ -33,6 +35,7 @@ class DrawingCanvas extends HookWidget {
     required this.allSketches,
     required this.canvasGlobalKey,
     required this.filled,
+    required this.isScaling,
     required this.polygonSides,
     required this.backgroundImage,
   }) : super(key: key);
@@ -53,27 +56,37 @@ class DrawingCanvas extends HookWidget {
   void onPointerDown(PointerDownEvent details, BuildContext context) {
     final box = context.findRenderObject() as RenderBox;
     final offset = box.globalToLocal(details.position);
-    currentSketch.value = Sketch.fromDrawingMode(
-      Sketch(
-        points: [offset],
-        size: drawingMode.value == DrawingMode.eraser
-            ? eraserSize.value
-            : strokeSize.value,
-        color: drawingMode.value == DrawingMode.eraser
-            ? kCanvasColor
-            : selectedColor.value,
-        sides: polygonSides.value,
-      ),
-      drawingMode.value,
-      filled.value,
-    );
+    // Check if a scaling gesture is in progress
+    const int delayToConfirmScaling = 100;
+    Future.delayed(const Duration(milliseconds: delayToConfirmScaling), () {
+      if (isScaling.value) return;
+      currentSketch.value = Sketch.fromDrawingMode(
+        Sketch(
+          points: [offset],
+          size: drawingMode.value == DrawingMode.eraser
+              ? eraserSize.value
+              : strokeSize.value,
+          color: drawingMode.value == DrawingMode.eraser
+              ? kCanvasColor
+              : selectedColor.value,
+          sides: polygonSides.value,
+        ),
+        drawingMode.value,
+        filled.value,
+      );
+    });
   }
 
   void onPointerMove(PointerMoveEvent details, BuildContext context) {
-    final box = context.findRenderObject() as RenderBox;
-    final offset = box.globalToLocal(details.position);
-    final points = List<Offset>.from(currentSketch.value?.points ?? [])
-      ..add(offset);
+    var points = <Offset>[];
+    // unfortunately isScaling only becomes true after the first onPointerDown/onPointerMove
+    final currentSketchPoints = currentSketch.value?.points ?? [];
+    if (!isScaling.value && currentSketchPoints.isNotEmpty) {
+      final box = context.findRenderObject() as RenderBox;
+      final offset = box.globalToLocal(details.position);
+      points = List<Offset>.from(currentSketch.value?.points ?? [])
+        ..add(offset);
+    }
 
     currentSketch.value = Sketch.fromDrawingMode(
       Sketch(
@@ -92,8 +105,14 @@ class DrawingCanvas extends HookWidget {
   }
 
   void onPointerUp(PointerUpEvent details) {
-    allSketches.value = List<Sketch>.from(allSketches.value)
-      ..add(currentSketch.value!);
+    if (!isScaling.value && currentSketch.value!.points.isNotEmpty) {
+      allSketches.value = List<Sketch>.from(allSketches.value)
+        ..add(currentSketch.value!);
+    }
+    cleanUpCurrentSketch();
+  }
+
+  void cleanUpCurrentSketch() {
     currentSketch.value = Sketch.fromDrawingMode(
       Sketch(
         points: [],
@@ -141,6 +160,8 @@ class DrawingCanvas extends HookWidget {
       onPointerDown: (details) => onPointerDown(details, context),
       onPointerMove: (details) => onPointerMove(details, context),
       onPointerUp: onPointerUp,
+      // onPointerPanZoomStart: (_) => isScaling.value = true,
+      // onPointerPanZoomEnd: (_) => isScaling.value = false,
       child: ValueListenableBuilder(
         valueListenable: currentSketch,
         builder: (context, sketch, child) {
@@ -174,15 +195,38 @@ class SketchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (backgroundImage != null) {
+      final double originalWidth = backgroundImage!.width.toDouble();
+      final double originalHeight = backgroundImage!.height.toDouble();
+      final double originalAspectRatio = originalWidth / originalHeight;
+
+      double targetWidth = size.width;
+      double targetHeight = size.height;
+
+      if (originalAspectRatio > 1) {
+        // If the original image is wider than it is tall
+        targetHeight = targetWidth / originalAspectRatio;
+        if (targetHeight > size.height) {
+          // If the scaled image is still too tall
+          targetHeight = size.height;
+          targetWidth = targetHeight * originalAspectRatio;
+        }
+      } else {
+        // If the original image is taller than it is wide
+        targetWidth = targetHeight * originalAspectRatio;
+        if (targetWidth > size.width) {
+          // If the scaled image is still too wide
+          targetWidth = size.width;
+          targetHeight = targetWidth / originalAspectRatio;
+        }
+      }
+      double verticalOffset = (size.height - targetHeight) / 2;
+      double horizontalOffset = (size.width - targetWidth) / 2;
+
       canvas.drawImageRect(
         backgroundImage!,
+        Rect.fromLTWH(0, 0, originalWidth, originalHeight),
         Rect.fromLTWH(
-          0,
-          0,
-          backgroundImage!.width.toDouble(),
-          backgroundImage!.height.toDouble(),
-        ),
-        Rect.fromLTWH(0, 0, size.width, size.height),
+            horizontalOffset, verticalOffset, targetWidth, targetHeight),
         Paint(),
       );
     }
@@ -275,7 +319,7 @@ class SketchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant SketchPainter oldDelegate) {
+  bool shouldRepaint(SketchPainter oldDelegate) {
     return oldDelegate.sketches != sketches;
   }
 }
