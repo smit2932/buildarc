@@ -1,4 +1,8 @@
+import 'dart:ui';
+
+import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:ardennes/models/drawings/drawing_detail.dart';
+import 'package:flutter/foundation.dart';
 
 class DrawingDetailState {
   DrawingDetailState init() {
@@ -19,13 +23,30 @@ class DrawingDetailStateLoading extends DrawingDetailState {
 
 class DrawingDetailStateLoaded extends DrawingDetailState {
   final DrawingDetail drawingDetail;
+  final Image? image;
+  final List<Sketch> annotations;
 
-  DrawingDetailStateLoaded({required this.drawingDetail});
+  DrawingDetailStateLoaded(
+      {required this.drawingDetail, this.image, required this.annotations});
 
   @override
   DrawingDetailStateLoaded clone() {
-    return DrawingDetailStateLoaded(drawingDetail: drawingDetail);
+    return DrawingDetailStateLoaded(
+        drawingDetail: drawingDetail, annotations: []);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DrawingDetailStateLoaded &&
+          runtimeType == other.runtimeType &&
+          drawingDetail == other.drawingDetail &&
+          image == other.image &&
+          listEquals(other.annotations, annotations);
+
+  @override
+  int get hashCode =>
+      drawingDetail.hashCode ^ image.hashCode ^ annotations.hashCode;
 }
 
 class DrawingDetailStateError extends DrawingDetailState {

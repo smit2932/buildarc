@@ -1,3 +1,5 @@
+import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
+
 abstract class DrawingDetailEvent {}
 
 class LoadSheet extends DrawingDetailEvent {
@@ -11,4 +13,10 @@ class LoadSheet extends DrawingDetailEvent {
       required this.collection,
       required this.versionId,
       required this.projectId});
+}
+
+class AddAnnotation extends DrawingDetailEvent {
+  final Sketch annotation;
+
+  AddAnnotation(this.annotation);
 }

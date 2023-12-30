@@ -1,13 +1,23 @@
+import 'dart:ui';
+
 import 'package:ardennes/features/drawing_detail/drawing_detail_event.dart';
+import 'package:ardennes/features/drawing_detail/views/drawing_detail_pullup_navigation.dart';
+import 'package:ardennes/features/drawing_detail/views/drawing_detail_side_navigation.dart';
+import 'package:ardennes/features/drawing_detail/views/undo_redo_stack.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_bloc.dart';
 import 'package:ardennes/features/drawings_catalog/drawings_catalog_event.dart';
-import 'package:ardennes/features/drawings_catalog/drawings_catalog_state.dart';
 import 'package:ardennes/libraries/account_context/bloc.dart';
-import 'package:ardennes/libraries/core_ui/image_downloading/image_firebase.dart';
+import 'package:ardennes/libraries/core_ui/canvas/color_palette.dart';
+import 'package:ardennes/libraries/core_ui/canvas/drawing_canvas.dart';
+import 'package:ardennes/libraries/core_ui/canvas/drawing_mode.dart';
+import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
+import 'package:ardennes/libraries/core_ui/icon_box/icon_box.dart';
 import 'package:ardennes/libraries/core_ui/window_size/window_size_calculator.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../libraries/account_context/state.dart';
 import 'drawing_detail_bloc.dart';
@@ -59,7 +69,7 @@ class DrawingDetailScreenState extends State<DrawingDetailScreen> {
           IconButton(
               icon: const Icon(Icons.restore),
               onPressed: () {
-                sheetKey.currentState?.fitToView();
+                sheetKey.currentState?._fitToView();
               }),
         ],
         title: const Text('Drawing Detail'),
@@ -95,7 +105,7 @@ class DrawingDetailScreenState extends State<DrawingDetailScreen> {
   }
 }
 
-class SheetWidget extends StatefulWidget {
+class SheetWidget extends StatefulHookWidget {
   final DrawingDetailState state;
   final int versionId;
 
@@ -125,25 +135,162 @@ class SheetWidgetState extends State<SheetWidget>
 
   @override
   Widget build(BuildContext context) {
+    final selectedColor = useState(Colors.black);
+    final strokeSize = useState<double>(10);
+    final eraserSize = useState<double>(30);
+    final drawingMode = useState(DrawingMode.pencil);
+    final filled = useState<bool>(false);
+    final polygonSides = useState<int>(3);
+    final isScaling = useState(false);
+
+    final canvasGlobalKey = GlobalKey();
+
+    ValueNotifier<Sketch?> currentSketch = useState(null);
+    ValueNotifier<List<Sketch>> allSketches = useState([]);
+
+    final undoRedoStack = useState(
+      UndoRedoStack(
+        sketchesNotifier: allSketches,
+        currentSketchNotifier: currentSketch,
+      ),
+    );
+
     final state = widget.state;
     if (state is DrawingDetailStateLoading) {
       return const CircularProgressIndicator();
     } else if (state is DrawingDetailStateLoaded) {
+      final backgroundImage = useState<Image?>(state.image);
+      allSketches.value = state.annotations;
       return Container(
-        color: Colors.grey[300],
-        child: InteractiveViewer(
-          minScale: 0.1,
-          maxScale: 16.0,
-          boundaryMargin: const EdgeInsets.all(20.0),
-          transformationController: controller,
-          child: Center(
-            child: ImageFromFirebase(
-              imageUrl: state
-                  .drawingDetail.versions[widget.versionId]!.files["hd_image"]!,
-            ),
-          ),
-        ),
-      );
+          color: Colors.grey[300],
+          child: Stack(
+            children: [
+              InteractiveViewer(
+                  minScale: 0.1,
+                  maxScale: 16.0,
+                  boundaryMargin: const EdgeInsets.all(20.0),
+                  transformationController: controller,
+                  // scaleEnabled: false,
+                  panEnabled: false,
+                  onInteractionStart: (ScaleStartDetails details) {
+                    // Handle interaction start
+                  },
+                  onInteractionUpdate: (ScaleUpdateDetails details) {
+                    // Handle interaction update
+                    if (details.scale != 1.0) {
+                      isScaling.value = true;
+                    }
+                  },
+                  onInteractionEnd: (ScaleEndDetails details) {
+                    if (isScaling.value) {
+                      isScaling.value = false;
+                    }
+                  },
+                  child: Center(
+                      child: Container(
+                    width: double.maxFinite,
+                    height: double.maxFinite,
+                    color: Colors.transparent,
+                    child: DrawingCanvas(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.height,
+                      drawingMode: drawingMode,
+                      selectedColor: selectedColor,
+                      strokeSize: strokeSize,
+                      eraserSize: eraserSize,
+                      currentSketch: currentSketch,
+                      allSketches: allSketches,
+                      canvasGlobalKey: canvasGlobalKey,
+                      filled: filled,
+                      isScaling: isScaling,
+                      polygonSides: polygonSides,
+                      backgroundImage: backgroundImage,
+                      onAddAnnotation: (annotation) {
+                        context
+                            .read<DrawingDetailBloc>()
+                            .add(AddAnnotation(annotation));
+                      },
+                    ),
+                  ))),
+              Positioned(
+                  right: 25, // Adjust as needed
+                  top: 10, // Adjust as needed
+                  child: Column(
+                    children: [
+                      IconBox(
+                        iconData: FontAwesomeIcons.pencil,
+                        selected: drawingMode.value == DrawingMode.pencil,
+                        onTap: () => drawingMode.value = DrawingMode.pencil,
+                        tooltip: 'Pencil',
+                      ),
+                      IconBox(
+                        selected: drawingMode.value == DrawingMode.line,
+                        onTap: () => drawingMode.value = DrawingMode.line,
+                        tooltip: 'Line',
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 2,
+                              color: drawingMode.value == DrawingMode.line
+                                  ? Colors.grey[900]
+                                  : Colors.grey,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconBox(
+                        iconData: Icons.hexagon_outlined,
+                        selected: drawingMode.value == DrawingMode.polygon,
+                        onTap: () => drawingMode.value = DrawingMode.polygon,
+                        tooltip: 'Polygon',
+                      ),
+                      IconBox(
+                        iconData: FontAwesomeIcons.square,
+                        selected: drawingMode.value == DrawingMode.square,
+                        onTap: () => drawingMode.value = DrawingMode.square,
+                        tooltip: 'Square',
+                      ),
+                      IconBox(
+                        iconData: FontAwesomeIcons.circle,
+                        selected: drawingMode.value == DrawingMode.circle,
+                        onTap: () => drawingMode.value = DrawingMode.circle,
+                        tooltip: 'Circle',
+                      ),
+                      ColorSelector(selectedColor: selectedColor),
+                      StrokeSelector(strokeSize: strokeSize),
+                      const Divider(
+                        color: Colors.black,
+                        height: 10,
+                      ),
+                      IconBox(
+                        iconData: FontAwesomeIcons.arrowRotateLeft,
+                        selected: allSketches.value.isNotEmpty,
+                        onTap: () {
+                          if (allSketches.value.isNotEmpty) {
+                            undoRedoStack.value.undo();
+                          }
+                        },
+                        tooltip: 'Undo',
+                      ),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: undoRedoStack.value.canRedo,
+                        builder: (_, canRedo, __) {
+                          return IconBox(
+                            iconData: FontAwesomeIcons.arrowRotateRight,
+                            selected: canRedo,
+                            onTap: canRedo
+                                ? () => undoRedoStack.value.redo()
+                                : () {},
+                            tooltip: 'Redo',
+                          );
+                        },
+                      ),
+                    ],
+                  )),
+            ],
+          ));
     } else if (state is DrawingDetailStateError) {
       return Text('Error: ${state.errorMessage}');
     } else {
@@ -152,7 +299,7 @@ class SheetWidgetState extends State<SheetWidget>
   }
 
   // https://github.com/JohannesMilke/interactive_viewer_example
-  void fitToView() {
+  void _fitToView() {
     final animationReset = Matrix4Tween(
       begin: controller.value,
       end: Matrix4.identity(),
@@ -169,206 +316,108 @@ class SheetWidgetState extends State<SheetWidget>
   }
 }
 
-class SideNavigation extends StatelessWidget {
-  const SideNavigation({Key? key}) : super(key: key);
+class ColorSelector extends HookWidget {
+  final ValueNotifier<Color> selectedColor;
+  final GlobalKey iconBoxKey = GlobalKey();
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      NavigationRail(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {},
-        labelType: NavigationRailLabelType.selected,
-        destinations: const [
-          NavigationRailDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: Text('Sheets'),
-          ),
-          NavigationRailDestination(
-            icon: Icon(Icons.sticky_note_2_outlined),
-            selectedIcon: Icon(Icons.sticky_note_2),
-            label: Text('Punch'),
-          ),
-          NavigationRailDestination(
-            icon: Icon(Icons.photo_album_outlined),
-            selectedIcon: Icon(Icons.photo_album),
-            label: Text('Photos'),
-          ),
-        ],
-      ),
-      const VerticalDivider(thickness: 1, width: 1),
-      const SizedBox(
-          width: 300, // Set the width as needed
-          child: DrawingsCatalog()),
-    ]);
-  }
-}
-
-class DrawingsCatalog extends StatelessWidget {
-  final ScrollController? scrollController;
-  final VoidCallback? onLoadSheet;
-
-  const DrawingsCatalog({Key? key, this.scrollController, this.onLoadSheet})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<DrawingsCatalogBloc, DrawingsCatalogState>(
-      builder: (context, state) {
-        if (state is FetchedDrawingsCatalogState) {
-          final items = state.displayedItems;
-          return ListView.builder(
-            controller: scrollController ?? ScrollController(),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                leading: ImageFromFirebase(imageUrl: item.smallThumbnailUrl),
-                // Display the smallThumbnail
-                title: Text(item.title),
-                // Display the title
-                subtitle: Text(item.discipline),
-                // Display the discipline
-                onTap: () {
-                  context.read<DrawingDetailBloc>().add(
-                        LoadSheet(
-                            number: item.title,
-                            collection: item.collection,
-                            versionId: item.versionId,
-                            projectId: state.drawingsCatalog.projectId),
-                      );
-                  onLoadSheet?.call();
-                },
-              );
-            },
-          );
-        } else {
-          // Handle other states or return an empty Container
-          return Container();
-        }
-      },
-    );
-  }
-}
-
-class PullUpWindowSizeNavigation extends StatelessWidget {
-  const PullUpWindowSizeNavigation({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final windowSize = WindowSizeCalculator.getWindowSize(context);
-    switch (windowSize) {
-      case WindowSize.medium:
-      case WindowSize.expanded:
-        return PullUpNavigation(
-          left: 20,
-          width: MediaQuery.of(context).size.width * 0.40,
-          initialChildSize: 0.4,
-          minChildSize: 0.2,
-        );
-      case WindowSize.xcompact:
-      case WindowSize.compact:
-        return PullUpNavigation(
-          left: 0,
-          width: MediaQuery.of(context).size.width,
-          initialChildSize: 0.3,
-          minChildSize: 0.1,
-        );
-    }
-  }
-}
-
-class PullUpNavigation extends StatelessWidget {
-  final double left;
-  final double width;
-  final double initialChildSize;
-  final double minChildSize;
-
-  const PullUpNavigation({
+  ColorSelector({
     Key? key,
-    required this.left,
-    required this.width,
-    required this.initialChildSize,
-    required this.minChildSize,
+    required this.selectedColor,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: left,
-      width: width,
-      top: 0,
-      bottom: 0,
-      child: DraggableScrollableActuator(
-          child: DraggableScrollableSheet(
-        initialChildSize: initialChildSize,
-        minChildSize: minChildSize,
-        maxChildSize: 0.9,
-        snap: true,
-        snapSizes: const [1 / 3],
-        snapAnimationDuration: const Duration(milliseconds: 300),
-        builder: (BuildContext context, ScrollController scrollController) {
-          const handleBar = HandleBar();
-          return ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12.0),
-              topRight: Radius.circular(12.0),
-            ),
-            child: Container(
-              color: Colors.blue[100],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  handleBar,
-                  Expanded(
-                      child: DrawingsCatalog(
-                    scrollController: scrollController,
-                    onLoadSheet: () {
-                      handleBar.resetScrollPosition(context);
-                    },
-                  )),
-                ],
-              ),
-            ),
-          );
-        },
-      )),
-    );
-  }
-}
-
-class HandleBar extends StatelessWidget {
-  const HandleBar({Key? key}) : super(key: key);
-
-  // function to reset the scroll position
-  void resetScrollPosition(BuildContext context) {
-    DraggableScrollableActuator.reset(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        DraggableScrollableActuator.reset(context);
-      },
-      child: Container(
-        height: 20,
-        width: 40,
-        color: Colors.transparent,
-        child: Center(
-          child: Container(
-            height: 5.0,
-            width: 40.0,
-            decoration: BoxDecoration(
-              color: Colors.grey[700],
-              borderRadius: const BorderRadius.all(
-                Radius.circular(12.0),
-              ),
-            ),
+        onTap: () => _showColorPalette(context),
+        child: Container(
+          key: iconBoxKey,
+          height: 48,
+          width: 48,
+          decoration: BoxDecoration(
+            color: selectedColor.value,
+            border: Border.all(color: Colors.blue, width: 1.5),
+            borderRadius: const BorderRadius.all(Radius.circular(5)),
+          ),
+        ));
+  }
+
+  void _showColorPalette(BuildContext context) {
+    final RenderBox renderBox =
+        iconBoxKey.currentContext!.findRenderObject() as RenderBox;
+    final iconBoxPosition = renderBox.localToGlobal(Offset.zero);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: iconBoxPosition.dx - 200,
+        top: iconBoxPosition.dy,
+        child: SizedBox(
+          width: 200,
+          child: ColorPalette(
+            selectedColor: selectedColor,
+            onColorSelected: (color) {
+              selectedColor.value = color;
+              overlayEntry.remove();
+            },
           ),
         ),
       ),
     );
+
+    Overlay.of(context).insert(overlayEntry);
+  }
+}
+
+class StrokeSelector extends StatefulWidget {
+  final ValueNotifier<double> strokeSize;
+
+  const StrokeSelector({
+    Key? key,
+    required this.strokeSize,
+  }) : super(key: key);
+
+  @override
+  StrokeSelectorState createState() => StrokeSelectorState();
+}
+
+class StrokeSelectorState extends State<StrokeSelector> {
+  @override
+  Widget build(BuildContext context) {
+    return IconBox(
+        iconData: Icons.brush,
+        selected: false,
+        tooltip: 'Stroke Size',
+        onTap: () => _showStrokeSizeSlider(context));
+  }
+
+  void _showStrokeSizeSlider(BuildContext context) {
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final iconBoxPosition = renderBox.localToGlobal(Offset.zero);
+    late OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
+        builder: (context) => Positioned(
+              left: iconBoxPosition.dx - 200,
+              top: iconBoxPosition.dy,
+              child: Material(
+                child: ValueListenableBuilder<double>(
+                    valueListenable: widget.strokeSize,
+                    builder: (context, value, child) {
+                      return Slider(
+                        value: widget.strokeSize.value,
+                        min: 2,
+                        max: 25,
+                        onChanged: (val) {
+                          widget.strokeSize.value = val;
+                        },
+                        onChangeEnd: (val) {
+                          widget.strokeSize.value = val;
+                          overlayEntry.remove();
+                        },
+                      );
+                    }),
+              ),
+            ));
+
+    Overlay.of(context).insert(overlayEntry);
   }
 }
