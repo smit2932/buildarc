@@ -15,12 +15,14 @@ class DrawingCanvas extends HookWidget {
   final ValueNotifier<double> eraserSize;
   final ValueNotifier<DrawingMode> drawingMode;
   final ValueNotifier<Sketch?> currentSketch;
-  final ValueNotifier<List<Sketch>> allSketches;
+  final ValueNotifier<Sketches> allSketches;
   final GlobalKey canvasGlobalKey;
   final ValueNotifier<int> polygonSides;
   final ValueNotifier<bool> filled;
   final ValueNotifier<bool> isScaling;
+  final ValueNotifier<bool> isEditing;
   final Function(Sketch) onAddAnnotation;
+  final Function(Sketch) onUpdateAnnotation;
 
   final Color kCanvasColor = const Color(0xfff2f3f7);
 
@@ -37,9 +39,11 @@ class DrawingCanvas extends HookWidget {
     required this.canvasGlobalKey,
     required this.filled,
     required this.isScaling,
+    required this.isEditing,
     required this.polygonSides,
     required this.backgroundImage,
     required this.onAddAnnotation,
+    required this.onUpdateAnnotation,
   }) : super(key: key);
 
   @override
@@ -58,6 +62,29 @@ class DrawingCanvas extends HookWidget {
   void onPointerDown(PointerDownEvent details, BuildContext context) {
     final box = context.findRenderObject() as RenderBox;
     final offset = box.globalToLocal(details.position);
+    if (isEditing.value) {
+      final selectedAnnotation = getSelectedAnnotation(offset);
+      if (selectedAnnotation != null) {
+        final newSketch = Sketch(
+          points: List<Offset>.from(selectedAnnotation.points),
+          color: Colors.red,
+          size: selectedAnnotation.size,
+          type: selectedAnnotation.type,
+          filled: selectedAnnotation.filled,
+          sides: selectedAnnotation.sides,
+          createTime: selectedAnnotation.createTime,
+          updateTime: DateTime.now(),
+          documentId: selectedAnnotation.documentId,
+        );
+
+        final index = allSketches.value.list.indexOf(selectedAnnotation);
+        if (index != -1) {
+          allSketches.value.list[index] = newSketch;
+          onUpdateAnnotation(newSketch);
+        }
+      }
+      return;
+    }
     // Check if a scaling gesture is in progress
     const int delayToConfirmScaling = 100;
     Future.delayed(const Duration(milliseconds: delayToConfirmScaling), () {
@@ -72,6 +99,8 @@ class DrawingCanvas extends HookWidget {
               ? kCanvasColor
               : selectedColor.value,
           sides: polygonSides.value,
+          createTime: DateTime.now(),
+          updateTime: DateTime.now(),
         ),
         drawingMode.value,
         filled.value,
@@ -100,6 +129,8 @@ class DrawingCanvas extends HookWidget {
             ? kCanvasColor
             : selectedColor.value,
         sides: polygonSides.value,
+        createTime: currentSketch.value?.createTime ?? DateTime.now(),
+        updateTime: DateTime.now(),
       ),
       drawingMode.value,
       filled.value,
@@ -108,8 +139,9 @@ class DrawingCanvas extends HookWidget {
 
   void onPointerUp(PointerUpEvent details) {
     if (!isScaling.value && currentSketch.value!.points.isNotEmpty) {
-      allSketches.value = List<Sketch>.from(allSketches.value)
-        ..add(currentSketch.value!);
+      allSketches.value = Sketches(
+          List<Sketch>.from(allSketches.value.list)..add(currentSketch.value!),
+          DateTime.now());
       onAddAnnotation(currentSketch.value!);
     }
     cleanUpCurrentSketch();
@@ -126,17 +158,44 @@ class DrawingCanvas extends HookWidget {
             ? kCanvasColor
             : selectedColor.value,
         sides: polygonSides.value,
+        createTime: DateTime.now(),
+        updateTime: DateTime.now(),
       ),
       drawingMode.value,
       filled.value,
     );
   }
 
+  Sketch? getSelectedAnnotation(Offset point) {
+    // Get all sketches whose bounding box contains the point
+    final candidates = allSketches.value.list.where((sketch) {
+      final points = sketch.points;
+      final minX = points.map((point) => point.dx).reduce(math.min);
+      final maxX = points.map((point) => point.dx).reduce(math.max);
+      final minY = points.map((point) => point.dy).reduce(math.min);
+      final maxY = points.map((point) => point.dy).reduce(math.max);
+
+      return point.dx >= minX &&
+          point.dx <= maxX &&
+          point.dy >= minY &&
+          point.dy <= maxY;
+    }).toList();
+
+    // If there are no candidates, return null
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    // Sort the candidates by updateTime in descending order and return the first one
+    candidates.sort((a, b) => b.updateTime.compareTo(a.updateTime));
+    return candidates.first;
+  }
+
   Widget buildAllSketches(BuildContext context) {
     return SizedBox(
       height: height,
       width: width,
-      child: ValueListenableBuilder<List<Sketch>>(
+      child: ValueListenableBuilder<Sketches>(
         valueListenable: allSketches,
         builder: (context, sketches, _) {
           return RepaintBoundary(
@@ -147,7 +206,7 @@ class DrawingCanvas extends HookWidget {
               color: kCanvasColor,
               child: CustomPaint(
                 painter: SketchPainter(
-                  sketches: sketches,
+                  sketches: sketches.list,
                   backgroundImage: backgroundImage.value,
                 ),
               ),

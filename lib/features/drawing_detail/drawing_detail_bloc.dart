@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:ardennes/libraries/drawing/image_provider.dart';
 import 'package:ardennes/models/drawings/drawing_detail.dart';
@@ -19,6 +17,8 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
       : super(DrawingDetailState().init()) {
     on<LoadSheet>(_loadSheet);
     on<AddAnnotation>(_addAnnotation);
+    on<DeleteAnnotation>(_deleteAnnotation);
+    on<UpdateAnnotation>(_updateAnnotation);
   }
 
   void _loadSheet(LoadSheet event, Emitter<DrawingDetailState> emit) async {
@@ -42,12 +42,6 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
         final image = await uiImageProvider.getImage(
           drawingDetail.versions[event.versionId]!.files["hd_image"]!,
         );
-        final loadedState = DrawingDetailStateLoaded(
-          drawingDetail: drawingDetail,
-          image: image,
-          annotations: [],
-        );
-        emit(loadedState);
 
         if (currentDrawingDocumentId != null) {
           final annotationsQuery = FirebaseFirestore.instance
@@ -58,16 +52,21 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
                 fromFirestore: Sketch.fromFirestore,
                 toFirestore: Sketch.toFirestore,
               );
-          emit.forEach(
+
+          // How to use Bloc with streams and concurrency
+          // Or, how to migrate your blocs and cubits to Bloc >=7.2.0
+          // https://verygood.ventures/blog/how-to-use-bloc-with-streams-and-concurrency
+          await emit.forEach(
             annotationsQuery.snapshots(),
             onData: (annotationsSnapshot) {
               final List<Sketch> annotations =
                   annotationsSnapshot.docs.map((doc) => doc.data()).toList();
 
+              annotations.sort((a, b) => a.updateTime.compareTo(b.updateTime));
               return DrawingDetailStateLoaded(
-                drawingDetail: loadedState.drawingDetail,
-                image: loadedState.image,
-                annotations: annotations,
+                drawingDetail: drawingDetail,
+                image: image,
+                annotations: Sketches(annotations, DateTime.now()),
               );
             },
           );
@@ -79,9 +78,6 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
       emit(DrawingDetailStateError(errorMessage: e.toString()));
     }
   }
-
-  void _loadAnnotations(
-      Emitter<DrawingDetailState> emit, DrawingDetailStateLoaded loadedState) {}
 
   void _addAnnotation(
       AddAnnotation event, Emitter<DrawingDetailState> emit) async {
@@ -99,4 +95,38 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
           .add(annotationMap);
     }
   }
+
+  void _deleteAnnotation(
+      DeleteAnnotation event, Emitter<DrawingDetailState> emit) async {
+    final documentId = currentDrawingDocumentId;
+    if (documentId == null) {
+      emit(DrawingDetailStateError(errorMessage: 'No drawing found'));
+    } else {
+      await FirebaseFirestore.instance
+          .collection('drawings')
+          .doc(documentId)
+          .collection('annotations')
+          .doc(event.annotationId)
+          .delete();
+    }
+  }
+
+  void _updateAnnotation(
+      UpdateAnnotation event, Emitter<DrawingDetailState> emit) async {
+    final annotation = event.annotation;
+    final annotationMap = Sketch.toFirestoreOptimized(annotation, null);
+
+    final documentId = currentDrawingDocumentId;
+    if (documentId == null) {
+      emit(DrawingDetailStateError(errorMessage: 'No drawing found'));
+    } else {
+      await FirebaseFirestore.instance
+          .collection('drawings')
+          .doc(documentId)
+          .collection('annotations')
+          .doc(event.annotation.documentId)
+          .update(annotationMap);
+    }
+  }
+
 }

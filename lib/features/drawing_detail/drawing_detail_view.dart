@@ -142,16 +142,24 @@ class SheetWidgetState extends State<SheetWidget>
     final filled = useState<bool>(false);
     final polygonSides = useState<int>(3);
     final isScaling = useState(false);
+    final isEditing = useState(false);
 
     final canvasGlobalKey = GlobalKey();
 
     ValueNotifier<Sketch?> currentSketch = useState(null);
-    ValueNotifier<List<Sketch>> allSketches = useState([]);
+    ValueNotifier<Sketches> allSketches =
+        useState(Sketches([], DateTime.fromMillisecondsSinceEpoch(0)));
 
     final undoRedoStack = useState(
       UndoRedoStack(
         sketchesNotifier: allSketches,
         currentSketchNotifier: currentSketch,
+        onDeleteAnnotation: (documentId) {
+          context.read<DrawingDetailBloc>().add(DeleteAnnotation(documentId));
+        },
+        onAddAnnotation: (annotation) {
+          context.read<DrawingDetailBloc>().add(AddAnnotation(annotation));
+        },
       ),
     );
 
@@ -160,7 +168,10 @@ class SheetWidgetState extends State<SheetWidget>
       return const CircularProgressIndicator();
     } else if (state is DrawingDetailStateLoaded) {
       final backgroundImage = useState<Image?>(state.image);
-      allSketches.value = state.annotations;
+
+      if (allSketches.value.updateTime.isBefore(state.annotations.updateTime)) {
+        allSketches.value = state.annotations;
+      }
       return Container(
           color: Colors.grey[300],
           child: Stack(
@@ -203,12 +214,18 @@ class SheetWidgetState extends State<SheetWidget>
                       canvasGlobalKey: canvasGlobalKey,
                       filled: filled,
                       isScaling: isScaling,
+                      isEditing: isEditing,
                       polygonSides: polygonSides,
                       backgroundImage: backgroundImage,
                       onAddAnnotation: (annotation) {
                         context
                             .read<DrawingDetailBloc>()
                             .add(AddAnnotation(annotation));
+                      },
+                      onUpdateAnnotation: (annotation) {
+                        context
+                            .read<DrawingDetailBloc>()
+                            .add(UpdateAnnotation(annotation));
                       },
                     ),
                   ))),
@@ -217,6 +234,12 @@ class SheetWidgetState extends State<SheetWidget>
                   top: 10, // Adjust as needed
                   child: Column(
                     children: [
+                      IconBox(
+                        iconData: Icons.select_all,
+                        selected: isEditing.value,
+                        onTap: () => isEditing.value = !isEditing.value,
+                        tooltip: 'Edit',
+                      ),
                       IconBox(
                         iconData: FontAwesomeIcons.pencil,
                         selected: drawingMode.value == DrawingMode.pencil,
@@ -266,9 +289,9 @@ class SheetWidgetState extends State<SheetWidget>
                       ),
                       IconBox(
                         iconData: FontAwesomeIcons.arrowRotateLeft,
-                        selected: allSketches.value.isNotEmpty,
+                        selected: allSketches.value.list.isNotEmpty,
                         onTap: () {
-                          if (allSketches.value.isNotEmpty) {
+                          if (allSketches.value.list.isNotEmpty) {
                             undoRedoStack.value.undo();
                           }
                         },

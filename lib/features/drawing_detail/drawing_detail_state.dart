@@ -24,7 +24,7 @@ class DrawingDetailStateLoading extends DrawingDetailState {
 class DrawingDetailStateLoaded extends DrawingDetailState {
   final DrawingDetail drawingDetail;
   final Image? image;
-  final List<Sketch> annotations;
+  final Sketches annotations;
 
   DrawingDetailStateLoaded(
       {required this.drawingDetail, this.image, required this.annotations});
@@ -32,7 +32,7 @@ class DrawingDetailStateLoaded extends DrawingDetailState {
   @override
   DrawingDetailStateLoaded clone() {
     return DrawingDetailStateLoaded(
-        drawingDetail: drawingDetail, annotations: []);
+        drawingDetail: drawingDetail, annotations: annotations);
   }
 
   @override
@@ -42,7 +42,8 @@ class DrawingDetailStateLoaded extends DrawingDetailState {
           runtimeType == other.runtimeType &&
           drawingDetail == other.drawingDetail &&
           image == other.image &&
-          listEquals(other.annotations, annotations);
+          other.annotations.updateTime == annotations.updateTime &&
+          listEquals(other.annotations.list, annotations.list);
 
   @override
   int get hashCode =>

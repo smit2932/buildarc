@@ -63,6 +63,7 @@ dependencies:
   injectable_generator: ^2.4.1
   flutter_hooks: ^0.20.3
   font_awesome_flutter: ^10.6.0
+  http: ^1.1.0
 
 
 dev_dependencies:
