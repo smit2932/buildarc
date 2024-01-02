@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:ardennes/libraries/core_ui/canvas/color_palette.dart';
 import 'package:ardennes/libraries/core_ui/canvas/drawing_mode.dart';
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:flutter/material.dart' hide Image;
@@ -59,28 +60,32 @@ class DrawingCanvas extends HookWidget {
     );
   }
 
-  void onPointerDown(PointerDownEvent details, BuildContext context) {
+  Future<void> onPointerDown(
+      PointerDownEvent details, BuildContext context) async {
     final box = context.findRenderObject() as RenderBox;
     final offset = box.globalToLocal(details.position);
     if (isEditing.value) {
       final selectedAnnotation = getSelectedAnnotation(offset);
       if (selectedAnnotation != null) {
-        final newSketch = Sketch(
-          points: List<Offset>.from(selectedAnnotation.points),
-          color: Colors.red,
-          size: selectedAnnotation.size,
-          type: selectedAnnotation.type,
-          filled: selectedAnnotation.filled,
-          sides: selectedAnnotation.sides,
-          createTime: selectedAnnotation.createTime,
-          updateTime: DateTime.now(),
-          documentId: selectedAnnotation.documentId,
-        );
+        Color? selectedColor = await _showColorPalette(context);
+        if (selectedColor != null) {
+          final newSketch = Sketch(
+            points: List<Offset>.from(selectedAnnotation.points),
+            color: selectedColor,
+            size: selectedAnnotation.size,
+            type: selectedAnnotation.type,
+            filled: selectedAnnotation.filled,
+            sides: selectedAnnotation.sides,
+            createTime: selectedAnnotation.createTime,
+            updateTime: DateTime.now(),
+            documentId: selectedAnnotation.documentId,
+          );
 
-        final index = allSketches.value.list.indexOf(selectedAnnotation);
-        if (index != -1) {
-          allSketches.value.list[index] = newSketch;
-          onUpdateAnnotation(newSketch);
+          final index = allSketches.value.list.indexOf(selectedAnnotation);
+          if (index != -1) {
+            allSketches.value.list[index] = newSketch;
+            onUpdateAnnotation(newSketch);
+          }
         }
       }
       return;
@@ -106,6 +111,21 @@ class DrawingCanvas extends HookWidget {
         filled.value,
       );
     });
+  }
+
+  Future<Color?> _showColorPalette(BuildContext context) async {
+    return await showDialog<Color>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: ColorPalette(
+            onColorSelected: (color) {
+              Navigator.of(context).pop(color);
+            },
+          ),
+        );
+      },
+    );
   }
 
   void onPointerMove(PointerMoveEvent details, BuildContext context) {

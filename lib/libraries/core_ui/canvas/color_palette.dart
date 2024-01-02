@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ColorPalette extends HookWidget {
-  final ValueNotifier<Color> selectedColor;
+  final ValueNotifier<Color>? selectedColor;
   final ValueChanged<Color> onColorSelected;
 
   const ColorPalette({
     Key? key,
     required this.onColorSelected,
-    required this.selectedColor,
+    this.selectedColor,
   }) : super(key: key);
 
   @override
@@ -28,7 +28,7 @@ class ColorPalette extends HookWidget {
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               onTap: () {
-                selectedColor.value = color;
+                selectedColor?.value = color;
                 onColorSelected(color);
               },
               child: Container(
@@ -37,7 +37,7 @@ class ColorPalette extends HookWidget {
                 decoration: BoxDecoration(
                   color: color,
                   border: Border.all(
-                    color: selectedColor.value == color
+                    color: selectedColor?.value == color
                         ? Colors.blue
                         : Colors.grey,
                     width: 1.5,
