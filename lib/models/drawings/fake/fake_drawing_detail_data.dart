@@ -4,7 +4,7 @@ import 'package:ardennes/models/drawings/fake/fake_drawing_detail_log.dart';
 import 'package:ardennes/models/fake_helper/document_id_generator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-final drawingDetail1 = {
+final sampleDrawingDetail1 = {
   "project": "dkm87fh3fdh30j",
   "collection": "Story One",
   "number": "A-001",
@@ -15,7 +15,7 @@ final drawingDetail1 = {
       "version_name": "Initial Set",
       "issuance_date": Timestamp.now(),
       "publish_session_id": "83jfnh4i5763gj",
-      "published_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+      "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
       "status": "published",
       "files": {
         "pdf_path":
@@ -37,7 +37,7 @@ final drawingDetail1 = {
   },
 };
 
-final drawingDetail2 = {
+final sampleDrawingDetail2 = {
   "project": "dkm87fh3fdh30j",
   "collection": "Story One",
   "number": "A-002",
@@ -48,7 +48,7 @@ final drawingDetail2 = {
       "version_name": "Initial Set",
       "issuance_date": Timestamp.now(),
       "publish_session_id": "83jfnh4i5763gj",
-      "published_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+      "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
       "status": "published",
       "files": {
         "pdf_path":
@@ -70,16 +70,16 @@ final drawingDetail2 = {
   }
 };
 
-void populateDrawingsDetail() {
+void populateSampleDrawingsDetails() {
   final projects = FirebaseFirestore.instance.collection("drawings");
   for (var drawings in [
     <String, dynamic>{
       "document_id": "3jd7395jf736h295h",
-      "content": drawingDetail1
+      "content": sampleDrawingDetail1
     },
     <String, dynamic>{
       "document_id": "9573hfkj295hjfk2o93jn",
-      "content": drawingDetail2
+      "content": sampleDrawingDetail2
     }
   ]) {
     projects.doc(drawings["document_id"]).set(drawings["content"]);
@@ -94,13 +94,18 @@ List<dynamic> populateDrawingsDetailNoorAcademy() {
   final random = Random(
       getDeterministicRandomSeed("drawings")); // Seeded random number generator
 
+  final projects = [
+    "dkm87fh3fdh30j", // I-275 Reconstruction
+    "d8j3h8d7h3d8h" // I-696 Reconstruction
+  ];
+
   final versions = List.generate(
       40,
       (i) => {
             "version_name": "Initial Set",
             "issuance_date": issuanceDate,
             "publish_session_id": "83jfnh4i5763gj",
-            "published_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+            "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
             "status": "published",
             "files": {
               "pdf_path":
@@ -120,25 +125,11 @@ List<dynamic> populateDrawingsDetailNoorAcademy() {
             },
           });
 
-  for (var version in versions) {
-    final documentId = generateDocumentId(20, random);
-    FirebaseFirestore.instance.collection("drawings").doc(documentId).set({
-      "project": "dkm87fh3fdh30j",
-      "collection": "Story One",
-      "number": "A-${versions.indexOf(version) + 1}",
-      "discipline": "Architecture",
-      "tags": ["tag1"],
-      "versions": {
-        "0": version,
-      },
-    });
-    populateFakeDrawingDetailActivityLogs(documentId);
-  }
-
-  return List<Map<String, dynamic>>.generate(
+  // Generate all drawing data first
+  final drawingsData = List<Map<String, dynamic>>.generate(
       versions.length,
       (i) => {
-            "project": "dkm87fh3fdh30j",
+            "project_id": projects[random.nextBool() ? 0 : 1],
             "collection": "Story One",
             "number": "A-${i + 1}",
             "discipline": "Architecture",
@@ -147,4 +138,21 @@ List<dynamic> populateDrawingsDetailNoorAcademy() {
               "0": versions[i],
             },
           });
+
+  // Then use this data to populate Firestore
+  for (var drawing in drawingsData) {
+    final documentId = generateDocumentId(20, random);
+    FirebaseFirestore.instance.collection("drawings").doc(documentId).set({
+      "project": drawing["project_id"],
+      // Note: using "project" to match existing schema
+      "collection": drawing["collection"],
+      "number": drawing["number"],
+      "discipline": drawing["discipline"],
+      "tags": drawing["tags"],
+      "versions": drawing["versions"],
+    });
+    populateFakeDrawingDetailActivityLogs(documentId);
+  }
+
+  return drawingsData;
 }

@@ -10,7 +10,7 @@ Map<String, dynamic> createVersion(int id, String name, int sheetsCount) {
     "id": id,
     "name": name,
     "issuance_date": Timestamp.now(),
-    "created_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+    "created_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
     "sheets_count": sheetsCount,
   };
 }
@@ -20,7 +20,7 @@ Map<String, dynamic> createCollection(
   return {
     "name": name,
     "versions": versions,
-    "created_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+    "created_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
     "create_on": Timestamp.now()
   };
 }
@@ -59,7 +59,7 @@ Map<String, dynamic> createPublishedLog(
     "issuance_date": Timestamp.now(),
     "sheets_count": sheetsCount,
     "published_on_date": Timestamp.now(),
-    "published_by_user_id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+    "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
     "status": status,
   };
 }
@@ -181,9 +181,15 @@ void populateDrawingsCatalogNoorAcademy(List<dynamic> drawings) {
       "drawings_catalog")); // Seeded random number generator
   var catalogs = [drawingsCatalog1, drawingsCatalog2];
   for (var catalog in catalogs) {
+    String projectId = catalog['project_id'];
+    List<dynamic> projectDrawings = drawings
+        .where((drawing) => drawing['project_id'] == projectId)
+        .toList();
+
     var catalogDocumentId = generateDocumentId(20, random);
     drawingsCatalog.doc(catalogDocumentId).set(catalog);
-    populateDrawingItemsFromDetailsOfNoorAcademy(catalogDocumentId, drawings);
+    populateDrawingItemsFromDetailsOfNoorAcademy(
+        catalogDocumentId, projectDrawings);
     populateFakeDrawingsCatalogActivityLogs(catalogDocumentId);
   }
 }

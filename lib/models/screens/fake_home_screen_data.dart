@@ -1,6 +1,6 @@
 //
 // final user1 = <String, dynamic>{
-//   "id": "TnUKs6PMt8UAltnGgANpYL4EZK15",
+//   "id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
 //   "company_id": "3ndmjoe8yhfhn2",
 //   "projects": [
 //     {"project_id": "dkm87fh3fdh30j", "project_name": "I-275 Reconstruction"},
@@ -26,7 +26,7 @@ void populateHomeScreens() {
 const String _project1Id = "dkm87fh3fdh30j";
 const String _project2Id = "d8j3h8d7h3d8h";
 const String _companyId = "3ndmjoe8yhfhn2";
-const String _userId = "TnUKs6PMt8UAltnGgANpYL4EZK15";
+const String _userId = "NiYpNa0jt9EXooTcLRRv7qGMJLpd";
 
 final fakeRecentlyViewedDrawingsOfProject1 = <String, dynamic>{
   "project_id": _project1Id,
