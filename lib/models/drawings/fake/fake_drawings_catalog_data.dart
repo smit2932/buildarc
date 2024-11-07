@@ -188,8 +188,8 @@ void populateDrawingsCatalogNoorAcademy(List<dynamic> drawings) {
 
     var catalogDocumentId = generateDocumentId(20, random);
     drawingsCatalog.doc(catalogDocumentId).set(catalog);
-    populateDrawingItemsFromDetailsOfNoorAcademy(
+    populateDrawingCatalogItemsFromDetailsOfNoorAcademy(
         catalogDocumentId, projectDrawings);
-    populateFakeDrawingsCatalogActivityLogs(catalogDocumentId);
+    populateDrawingsCatalogActivityLogs(catalogDocumentId);
   }
 }

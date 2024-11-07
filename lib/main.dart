@@ -71,6 +71,12 @@ Future<void> _configureFirebaseFirestore() async {
   var port = int.parse(dotenv.get("FIRESTORE_EMU_PORT", fallback: "8080"));
   FirebaseFirestore.instance.useFirestoreEmulator(host, port);
   debugPrint('Using Firebase Firestore emulator on: $host:$port');
+  // Leave as commented if loading from firebase emualator export
+  // E.g. firebase emulators:start --import=.firebase/emulator/export
+  // populateFirestore();
+}
+
+void populateFirestore() {
   populateCompanies();
   populateProjects();
   final drawings = populateDrawingsDetailNoorAcademy();
