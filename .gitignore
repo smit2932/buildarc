@@ -47,7 +47,10 @@ app.*.map.json
 *.env
 
 # firebase
-.firebase/
+.firebase/*
+!.firebase/emulator
+.firebase/emulator/*
+!.firebase/emulator/export
 .firebaserc
 .metadata
 raw-pdf/permit-set/extraction
