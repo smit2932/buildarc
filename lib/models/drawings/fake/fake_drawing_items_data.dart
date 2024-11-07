@@ -26,7 +26,7 @@ Map<String, dynamic> createDrawingItems(List<Map<String, dynamic>> items) {
   };
 }
 
-final drawingItems1 = createDrawingItems([
+final sampleDrawingItems1 = createDrawingItems([
   createDrawingItem(
     "Zone One",
     "Architectural",
@@ -63,7 +63,7 @@ final drawingItems1 = createDrawingItems([
   ),
 ]);
 
-final drawingItems2 = createDrawingItems([
+final sampleDrawingItems2 = createDrawingItems([
   createDrawingItem(
     "Building One",
     "Civil",
@@ -100,7 +100,7 @@ final drawingItems2 = createDrawingItems([
   ),
 ]);
 
-void populateDrawingItemsInCatalog(catalogId) {
+void populateSampleDrawingItemsInCatalog(catalogId) {
   final random = Random(getDeterministicRandomSeed(
       "$catalogId/drawing_items")); // Seeded random number generator
 
@@ -109,17 +109,17 @@ void populateDrawingItemsInCatalog(catalogId) {
       .doc(catalogId)
       .collection('drawing_items');
 
-  for (var items in [drawingItems1, drawingItems2]) {
+  for (var items in [sampleDrawingItems1, sampleDrawingItems2]) {
     final documentId =
         generateDocumentId(20, random); // Generate a repeatable random ID
     drawingItems.doc(documentId).set(items);
   }
 }
 
-Future<void> populateDrawingItemsFromDetailsOfNoorAcademy(
+Future<void> populateDrawingCatalogItemsFromDetailsOfNoorAcademy(
     String catalogId, List<dynamic> drawings) async {
-  final random = Random(getDeterministicRandomSeed(
-      "$catalogId/drawings_catalog_drawing_items")); // Seeded random number generator
+  final random = Random(
+      getDeterministicRandomSeed("$catalogId/drawings_catalog_drawing_items"));
 
   const numberOfItemsPerDocument = 10;
 
@@ -136,13 +136,16 @@ Future<void> populateDrawingItemsFromDetailsOfNoorAcademy(
     final sublist = drawings.sublist(i, end);
 
     final items = sublist.map((drawing) {
+      // Get the version ID (0 or 1) from the versions map
+      final versionId = drawing["versions"].keys.first;
+
       return createDrawingItem(
         drawing["collection"],
         drawing["discipline"],
         drawing["tags"],
-        drawing["versions"]["0"]["files"],
+        drawing["versions"][versionId]["files"],
         drawing["number"],
-        0,
+        int.parse(versionId), // Convert string ID to int
       );
     }).toList();
 
@@ -154,8 +157,10 @@ Future<void> populateDrawingItemsFromDetailsOfNoorAcademy(
   await updateDrawingCatalog(catalogId, lastDocumentId);
 }
 
-Future<void> updateDrawingCatalog(String catalogId, String lastDocumentId) async {
-  final drawingsCatalog = FirebaseFirestore.instance.collection("drawings_catalog");
+Future<void> updateDrawingCatalog(
+    String catalogId, String lastDocumentId) async {
+  final drawingsCatalog =
+      FirebaseFirestore.instance.collection("drawings_catalog");
   await drawingsCatalog.doc(catalogId).update({
     'append_drawing_item_to_document': lastDocumentId,
   });

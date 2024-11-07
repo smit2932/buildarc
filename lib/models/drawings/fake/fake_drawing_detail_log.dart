@@ -65,7 +65,7 @@ final drawingDetailActivityLogs2 = [
   }
 ];
 
-void populateFakeDrawingDetailActivityLogs(String drawingDocumentId) {
+void populateDrawingDetailActivityLogs(String drawingDocumentId) {
   var random =
   Random(getDeterministicRandomSeed("drawingsActivityLogs"));
   var drawings = FirebaseFirestore.instance.collection('drawings');

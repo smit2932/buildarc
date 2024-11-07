@@ -84,74 +84,89 @@ void populateSampleDrawingsDetails() {
   ]) {
     projects.doc(drawings["document_id"]).set(drawings["content"]);
   }
-  // j6fyy1LtqG4ukn9OqqgM has markups
 }
 
 List<dynamic> populateDrawingsDetailNoorAcademy() {
   final Timestamp issuanceDate =
       Timestamp.fromDate(DateTime.parse("2023-12-15"));
 
-  final random = Random(
-      getDeterministicRandomSeed("drawings")); // Seeded random number generator
+  final random = Random(getDeterministicRandomSeed("drawings"));
 
   final projects = [
     "dkm87fh3fdh30j", // I-275 Reconstruction
     "d8j3h8d7h3d8h" // I-696 Reconstruction
   ];
 
-  final versions = List.generate(
-      40,
-      (i) => {
-            "version_name": "Initial Set",
-            "issuance_date": issuanceDate,
-            "publish_session_id": "83jfnh4i5763gj",
-            "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
-            "status": "published",
-            "files": {
-              "pdf_path":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}.pdf",
-              "micro_thumbnail_image":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SmallThumbnail.jpg",
-              "thumbnail_image":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_Thumbnail.jpg",
-              "sd_image":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SD.jpg",
-              "hd_image":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_HD.jpg",
-              "uhd_image":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_UHD.jpg",
-              "sheet_number_clip":
-                  "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SmallThumbnail.jpg",
-            },
-          });
+  final versions = [
+    {"id": "0", "name": "Initial Set"},
+    {"id": "1", "name": "Version Two"}
+  ];
 
-  // Generate all drawing data first
-  final drawingsData = List<Map<String, dynamic>>.generate(
-      versions.length,
-      (i) => {
-            "project_id": projects[random.nextBool() ? 0 : 1],
-            "collection": "Story One",
-            "number": "A-${i + 1}",
-            "discipline": "Architecture",
-            "tags": ["tag1"],
-            "versions": {
-              "0": versions[i],
-            },
-          });
+  final collections = ["Story One", "Zone Two", "ungrouped"];
+
+  final disciplines = [
+    {"name": "Architecture", "prefix": "A"},
+    {"name": "Geotechnical", "prefix": "G"},
+    {"name": "Civil", "prefix": "C"}
+  ];
+
+  final versionData = List.generate(40, (i) {
+    final selectedVersion = versions[random.nextInt(versions.length)];
+    return {
+      "version_name": selectedVersion["name"],
+      "issuance_date": issuanceDate,
+      "publish_session_id": "83jfnh4i5763gj",
+      "published_by_user_id": "NiYpNa0jt9EXooTcLRRv7qGMJLpd",
+      "status": "published",
+      "files": {
+        "pdf_path": "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}.pdf",
+        "micro_thumbnail_image":
+            "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SmallThumbnail.jpg",
+        "thumbnail_image":
+            "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_Thumbnail.jpg",
+        "sd_image": "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SD.jpg",
+        "hd_image": "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_HD.jpg",
+        "uhd_image": "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_UHD.jpg",
+        "sheet_number_clip":
+            "drawing_images/3ndmjoe8yhfhn2/ARCH_page_${i + 1}_SmallThumbnail.jpg",
+      },
+    };
+  });
+
+  final drawingsData =
+      List<Map<String, dynamic>>.generate(versionData.length, (i) {
+    final discipline = disciplines[random.nextInt(disciplines.length)];
+    final selectedVersion = versions[random.nextInt(versions.length)];
+
+    final tags = <String>[];
+    if (random.nextBool()) tags.add("tag1");
+    if (random.nextBool()) tags.add("tag2");
+    if (tags.isEmpty) tags.add("tag1"); // Ensure at least one tag
+
+    return {
+      "project_id": projects[random.nextBool() ? 0 : 1],
+      "collection": collections[random.nextInt(collections.length)],
+      "number": "${discipline['prefix']}-${i + 1}",
+      "discipline": discipline['name'],
+      "tags": tags,
+      "versions": {
+        selectedVersion["id"]: versionData[i],
+      },
+    };
+  });
 
   // Then use this data to populate Firestore
   for (var drawing in drawingsData) {
     final documentId = generateDocumentId(20, random);
     FirebaseFirestore.instance.collection("drawings").doc(documentId).set({
       "project": drawing["project_id"],
-      // Note: using "project" to match existing schema
       "collection": drawing["collection"],
       "number": drawing["number"],
       "discipline": drawing["discipline"],
       "tags": drawing["tags"],
       "versions": drawing["versions"],
     });
-    populateFakeDrawingDetailActivityLogs(documentId);
+    populateDrawingDetailActivityLogs(documentId);
   }
 
   return drawingsData;

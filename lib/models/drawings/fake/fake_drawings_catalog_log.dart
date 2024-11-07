@@ -30,7 +30,7 @@ final drawingsCatalogActivityLogs = [
   }
 ];
 
-void populateFakeDrawingsCatalogActivityLogs(drawingsCatalogId) {
+void populateDrawingsCatalogActivityLogs(drawingsCatalogId) {
   var random =
       Random(getDeterministicRandomSeed("drawingsCatalogActivityLogs"));
   var drawingsCatalog = FirebaseFirestore.instance.collection('drawings_catalog');
