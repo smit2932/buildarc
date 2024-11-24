@@ -58,12 +58,12 @@ Make sure the following dependencies are installed:
    ```bash
    firebase init
    ```  
-    - **When prompted, select the following tools:**
+    - **When prompted for emulator option, select the following tools:**
         - Authentication
         - Firestore
         - Storage
         - Hosting
-        - UI
+    - After setup, discard any changes made to `firebase.json`
 
 ---
 
