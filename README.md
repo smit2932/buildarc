@@ -1,16 +1,108 @@
-# ardennes
+Your onboarding instructions for BuildArc are clear and provide good detail for a senior developer. However, there are areas that could use clarification, refinement, or additional context to ensure a smooth onboarding experience. Below is a polished version, along with critical steps or enhancements that might be missing:
 
-A hackathon of plangrid
+---
 
-## Getting Started
+### **BuildArc Onboarding Instructions**
 
-This project is a starting point for a Flutter application.
+**Overview**  
+BuildArc is a proof of concept (PoC) for a construction drawing management system. It serves as a lightweight alternative to off-the-shelf solutions like **ACC Build**, **Procore**, and **Fieldwire**.
 
-A few resources to get you started if this is your first Flutter project:
+This PoC includes features such as:
+- **Drawing Catalog Management**
+- **Detailed Annotation and Collaboration**
+- **Offline Mode with Sync Support**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+The system leverages Firestore as the backend database, providing robust offline capabilities and seamless synchronization across devices.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+### **Prerequisites**
+These instructions assume you are a senior developer familiar with essential tools and workflows. For example, before cloning the repository, ensure your GitHub public key is added. If you're unsure about generating or adding SSH keys, consult resources like Google or GPT.
+
+---
+
+### **Step-by-Step Instructions**
+
+#### **1. Clone the Repository**
+1. Visit the repository on GitHub:  
+   [BuildArc Repository](https://github.com/ripplearc/buildarc)
+2. Clone the repository using SSH (preferred):
+   ```bash
+   git clone git@github.com:ripplearc/buildarc.git
+   ```  
+    - **Note:** The clone process may take time, as it includes files for the Firebase Storage Emulator.
+
+---
+
+#### **2. Install Dependencies**
+Make sure the following dependencies are installed:
+1. **CocoaPods** (for iOS development):
+   ```bash
+   brew install cocoapods
+   ```  
+2. **Flutter SDK:**  
+   Follow the official [Flutter installation guide](https://flutter.dev/docs/get-started/install) for your platform.
+3. **Firebase Tools:**  
+   Install globally via npm:
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+---
+
+#### **3. Configure Firebase**
+1. **Login to Firebase:**
+   ```bash
+   firebase login
+   ```  
+2. **Initialize Firebase in the Project:**  
+   From the project directory:
+   ```bash
+   firebase init
+   ```  
+    - **When prompted, select the following tools:**
+        - Authentication
+        - Firestore
+        - Storage
+        - Hosting
+        - UI
+
+---
+
+#### **4. Set Up Firebase Emulator**
+1. Add the following shortcut to your terminal configuration file (e.g., `.zshrc` or `.bashrc`):
+   ```bash
+   alias start_firebase_emulator='firebase emulators:start --import=.firebase/emulator/export --export-on-exit'
+   ```  
+    - This ensures a smoother workflow for starting the emulator.
+
+2. Reload your terminal configuration:
+   ```bash
+   source ~/.zshrc
+   ```  
+
+3. Start the Firebase Emulator:
+   ```bash
+   start_firebase_emulator
+   ```  
+
+4. Open the Emulator UI to browse Firestore or Storage content.
+
+---
+
+#### **5. Run the Flutter App**
+1. Run the Flutter app:
+   ```bash
+   flutter run
+   ```  
+
+2. Select **Chrome** when prompted to choose a device.
+
+---
+
+#### **6. Access the App**
+- **Credentials:**
+    - **Username:** `construculator@gmail.com`
+    - **Password:** `123456`
+
+---
