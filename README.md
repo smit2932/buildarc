@@ -50,10 +50,11 @@ Make sure the following dependencies are installed:
 
 #### **3. Configure Firebase**
 1. **Login to Firebase:**
+Note: This is your own Firebase account and credentials, not the one listed at the bottom.
    ```bash
    firebase login
    ```  
-2. **Initialize Firebase in the Project:**  
+3. **Initialize Firebase in the Project:**  
    From the project directory:
    ```bash
    firebase init
