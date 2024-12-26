@@ -50,7 +50,8 @@ Make sure the following dependencies are installed:
 
 #### **3. Configure Firebase**
 1. **Login to Firebase:**
-Note: This is your own Firebase account and credentials, not the one listed at the bottom.
+
+** Note: This is your own Firebase account and credentials, not the one listed at the bottom. **
    ```bash
    firebase login
    ```  
