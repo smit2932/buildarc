@@ -1,4 +1,6 @@
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
+import 'package:ardennes/models/drawings/drawing_detail.dart';
+import 'package:ardennes/models/projects/project_metadata.dart';
 
 abstract class DrawingDetailEvent {}
 
@@ -30,4 +32,14 @@ class UpdateAnnotation extends DrawingDetailEvent {
   final Sketch annotation;
 
   UpdateAnnotation(this.annotation);
+}
+
+class AddRecentDrawingEvent extends DrawingDetailEvent {
+  final ProjectMetadata selectedProject;
+  final DrawingDetail drawingDetail;
+
+  AddRecentDrawingEvent(
+    this.selectedProject,
+    this.drawingDetail,
+  );
 }

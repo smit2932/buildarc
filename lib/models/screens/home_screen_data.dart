@@ -1,3 +1,4 @@
+import 'package:ardennes/models/drawings/drawing_detail.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RecentlyViewedDrawingTile {
@@ -36,8 +37,23 @@ class HomeScreenData {
     );
   }
 
-  static Map<String, Object?> toFirestore(
-      Object? homeScreenData, SetOptions? options) {
+  factory HomeScreenData.fromDrawingDetail(
+    DrawingDetail drawingDetail,
+  ) {
+    // NOTE: It will be present
+    final DrawingVersion drawingVersion = drawingDetail.versions[1]!;
+    return HomeScreenData(
+      drawings: [
+        RecentlyViewedDrawingTile(
+          title: drawingDetail.number,
+          subtitle: drawingDetail.discipline,
+          drawingThumbnailUrl: drawingVersion.files['thumbnail_image'] ?? '',
+        )
+      ],
+    );
+  }
+
+  static Map<String, Object?> toFirestore(Object? homeScreenData, SetOptions? options) {
     if (homeScreenData is HomeScreenData) {
       return {
         if (homeScreenData.drawings != null)
