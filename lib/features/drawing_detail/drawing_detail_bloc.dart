@@ -1,7 +1,10 @@
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:ardennes/libraries/drawing/image_provider.dart';
 import 'package:ardennes/models/drawings/drawing_detail.dart';
+import 'package:ardennes/models/screens/home_screen_data.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 
@@ -13,12 +16,12 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
   final UIImageProvider uiImageProvider;
   String? currentDrawingDocumentId;
 
-  DrawingDetailBloc({required this.uiImageProvider})
-      : super(DrawingDetailState().init()) {
+  DrawingDetailBloc({required this.uiImageProvider}) : super(DrawingDetailState().init()) {
     on<LoadSheet>(_loadSheet);
     on<AddAnnotation>(_addAnnotation);
     on<DeleteAnnotation>(_deleteAnnotation);
     on<UpdateAnnotation>(_updateAnnotation);
+    on<AddRecentDrawingEvent>(_addRecentDrawing);
   }
 
   void _loadSheet(LoadSheet event, Emitter<DrawingDetailState> emit) async {
@@ -129,4 +132,43 @@ class DrawingDetailBloc extends Bloc<DrawingDetailEvent, DrawingDetailState> {
     }
   }
 
+  Future<void> _addRecentDrawing(AddRecentDrawingEvent event, Emitter<DrawingDetailState> emit) async {
+    // User
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return emit(DrawingDetailStateError(errorMessage: "User doesn't exist"));
+    }
+
+    String userId = currentUser.uid;
+
+    // Adding recent logic
+    FirebaseFirestore.instance.useFirestoreEmulator('192.168.1.18', 8080);
+    Query<HomeScreenData> getRecentDrawingQuery = FirebaseFirestore.instance
+        .collection('home_screens')
+        .where('user_id', isEqualTo: userId)
+        .where('project_id', isEqualTo: event.selectedProject.id)
+        .withConverter(
+          fromFirestore: HomeScreenData.fromFirestore,
+          toFirestore: HomeScreenData.toFirestore,
+        );
+
+    try {
+      QuerySnapshot<HomeScreenData> querySnapshot = await getRecentDrawingQuery.get();
+      HomeScreenData? homeScreenData = querySnapshot.docs.firstOrNull?.data();
+
+      if (homeScreenData == null) {
+        // Add data
+        final Map<String, Object?> recentData = HomeScreenData.toFirestore(HomeScreenData.fromDrawingDetail(event.drawingDetail), null);
+        await FirebaseFirestore.instance.collection('home_screens').add(recentData);
+      } else {
+        // Update existing entry
+        await FirebaseFirestore.instance
+            .collection('home_screens')
+            .doc(querySnapshot.docs.first.id)
+            .update(HomeScreenData.toFirestore(HomeScreenData.fromDrawingDetail(event.drawingDetail), null));
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
 }

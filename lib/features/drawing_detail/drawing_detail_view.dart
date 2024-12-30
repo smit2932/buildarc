@@ -13,6 +13,8 @@ import 'package:ardennes/libraries/core_ui/canvas/drawing_mode.dart';
 import 'package:ardennes/libraries/core_ui/canvas/sketch.dart';
 import 'package:ardennes/libraries/core_ui/icon_box/icon_box.dart';
 import 'package:ardennes/libraries/core_ui/window_size/window_size_calculator.dart';
+import 'package:ardennes/models/drawings/drawing_detail.dart';
+import 'package:ardennes/models/projects/project_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,7 +48,22 @@ class DrawingDetailScreenState extends State<DrawingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final accountContextState = context.watch<AccountContextBloc>().state;
+    final drawingDetailState = context.watch<DrawingDetailBloc>().state;
     final drawingsCatalogBloc = context.read<DrawingsCatalogBloc>();
+
+    if (accountContextState is AccountContextLoadedState && drawingDetailState is DrawingDetailStateLoaded) {
+      final DrawingDetail currentDrawingDetail = drawingDetailState.drawingDetail;
+      final ProjectMetadata? selectedProject = accountContextState.selectedProject;
+
+      if (selectedProject != null) {
+        context.read<DrawingDetailBloc>().add(
+              AddRecentDrawingEvent(
+                selectedProject,
+                currentDrawingDetail,
+              ),
+            );
+      }
+    }
 
     if (accountContextState is AccountContextLoadedState) {
       final selectedProject = accountContextState.selectedProject;
